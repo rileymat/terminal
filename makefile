@@ -31,5 +31,5 @@ $(TEMPDIR):
 clean:
 	rm -rf $(BUILDDIR)
 
-run:
+run: all
 	$(OUTDIR)/terminal

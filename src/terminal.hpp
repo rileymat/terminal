@@ -10,22 +10,6 @@
 
 namespace Terminal
 {
-
-	class Location
-	{
-		public:
-			Location(int x, int y)
-				{
-					this->x = x;
-					this->y = y;
-				}
-			int getX() const {return x;}
-			int getY() const {return y;}
-		private:
-			int x;
-			int y;
-	};
-
 	class AnsiCode
 	{
 		public:
@@ -33,72 +17,92 @@ namespace Terminal
 			
 			template<typename charT, typename traits>
 			friend std::basic_ostream<charT, traits> &
-			operator<< (std::basic_ostream<charT, traits> &lhs, AnsiCode const &rhs) {
+			operator << (std::basic_ostream<charT, traits> &lhs, AnsiCode const &rhs) 
+			{
 				return lhs << "\033[" << rhs.code_;
 			}
 		private:
 			std::string code_;
 	};
 
-	class Terminal;
-
-	class LockedTerminal
+	class Location
 	{
 		public:
-			LockedTerminal(Terminal & term);
-			
-		    const LockedTerminal & moveCursor(Location const & loc) const;
-			const LockedTerminal & saveCursor() const;
-			const LockedTerminal & restoreCursor() const;
-			
-			
-			const LockedTerminal & operator << (Location const &  l)  const {moveCursor(l); return *this;}  
-			const LockedTerminal & operator << (const LockedTerminal& (*func)(const LockedTerminal&)) const {(*func)(*this); return *this;}
-			
-			template<typename T>
-			const LockedTerminal & operator <<(T t) const{std::stringstream ss; ss<<t; std::cout << ss.str() << std::flush; return *this;}	
+			Location(int x, int y);
+			template<typename charT, typename traits>
+			friend std::basic_ostream<charT, traits> &
+			operator << (std::basic_ostream<charT, traits> &lhs, Location const &rhs) 
+			{
+				std::stringstream ss;
+				ss << rhs.y << ";" << rhs.x << "H";
+				return lhs << AnsiCode(ss.str());
+			}
 		private:
-			Terminal & term_;
-			std::shared_ptr<std::lock_guard<std::mutex> > lock_;
+			int x;
+			int y;
 	};
 
 	class Terminal
 	{
-   
 		public:
 			Terminal();
 
 			void onTextEntry(std::function<void(std::string)>);
-			void clear() const;
-			void moveCursor(Location const & loc) const;
-			void saveCursor() const;
-			void restoreCursor() const;
-
-			LockedTerminal operator << (LockedTerminal (*func)(Terminal&)){ return (*func)(*this);}
+			
+			class LockedTerminal;
+			Terminal::LockedTerminal operator << (Terminal::LockedTerminal (*func)(Terminal&)){ return (*func)(*this);}
 
 			template<typename T>
-			LockedTerminal operator << (T t){return LockedTerminal(*this) << t;}
+			Terminal::LockedTerminal operator << (T t){return Terminal::LockedTerminal(*this) << t;}
 		
-		private:
-			void inputThreadFunc_();
-
-			
 		private:
 			std::function<void(std::string)> textEntryFunc_;
 			std::thread inputThread_;
+
+			void inputThreadFunc_();
+	
 		protected:
 			std::mutex outputMutex_;
+			void print(std::string const &) const;
+		
+		public:
+			
+			class LockedTerminal
+			{
+				public:
+					LockedTerminal(Terminal & term);
+			
+					const LockedTerminal & operator << (const LockedTerminal& (*func)(const LockedTerminal&)) const 
+					{
+							(*func)(*this); 
+							return *this;
+					 }
+			
+					template<typename T>
+					const LockedTerminal & operator <<(T t) const
+					{
+						std::stringstream ss; 
+						ss<<t; 
+						term_.print(ss.str());
+						return *this;
+					}
 
-			friend class LockedTerminal;
+				private:
+					Terminal & term_;
+					std::shared_ptr<std::lock_guard<std::mutex> > lock_;
+			};
 	};
 	
 	
-	LockedTerminal save(Terminal & term);
-	const LockedTerminal & save(const LockedTerminal & term);
+	Terminal::LockedTerminal save(Terminal & term);
+	const Terminal::LockedTerminal & save(const Terminal::LockedTerminal & term);
 
-	LockedTerminal restore(Terminal & term);
-	const LockedTerminal& restore(const LockedTerminal & term);
+	Terminal::LockedTerminal restore(Terminal & term);
+	const Terminal::LockedTerminal& restore(const Terminal::LockedTerminal & term);
 
-		
+	Terminal::LockedTerminal clear(Terminal & term);
+	const Terminal::LockedTerminal& clear(const Terminal::LockedTerminal & term);
+
+
 	extern Terminal terminal;	
 }
