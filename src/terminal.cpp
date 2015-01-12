@@ -13,25 +13,9 @@ namespace Terminal
 		this->y = y;
 	}
 
-	void Terminal::onTextEntry(std::function<void(std::string)> func)
+	Terminal::Terminal()
 	{
-		textEntryFunc_ = func;
-	}
 
-	void Terminal::inputThreadFunc_()
-	{
-		while(true)
-		{
-			std::string line;
-			std::getline (std::cin, line);
-			terminal << AnsiCode("1F") << AnsiCode("0K");
-			textEntryFunc_(line);
-		}
-	}
-
-	Terminal::Terminal():inputThread_(&Terminal::inputThreadFunc_, this)
-	{
-		inputThread_.detach();
 	}
 
 	void Terminal::print(std::string const & outString) const

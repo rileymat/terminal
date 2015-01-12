@@ -47,20 +47,12 @@ namespace Terminal
 		public:
 			Terminal();
 
-			void onTextEntry(std::function<void(std::string)>);
-			
 			class LockedTerminal;
 			Terminal::LockedTerminal operator << (Terminal::LockedTerminal (*func)(Terminal&)){ return (*func)(*this);}
 
 			template<typename T>
 			Terminal::LockedTerminal operator << (T t){return Terminal::LockedTerminal(*this) << t;}
 		
-		private:
-			std::function<void(std::string)> textEntryFunc_;
-			std::thread inputThread_;
-
-			void inputThreadFunc_();
-	
 		protected:
 			std::mutex outputMutex_;
 			void print(std::string const &) const;
@@ -91,6 +83,56 @@ namespace Terminal
 					Terminal & term_;
 					std::shared_ptr<std::lock_guard<std::mutex> > lock_;
 			};
+	};
+
+	
+	class Prompt
+	{
+		public:
+			Prompt(std::string text, Location location):text_(text),location_(location){}
+			template<typename charT, typename traits>
+			friend std::basic_ostream<charT, traits> &
+			operator << (std::basic_ostream<charT, traits> &lhs, Prompt const &rhs) 
+			{
+				return lhs << rhs.location_ << rhs.text_ <<AnsiCode("0K");
+			}
+			
+		private:
+			Location location_;
+			std::string text_;
+	};
+
+	template <typename P>
+	class InputHandler
+	{
+		public:
+			
+			InputHandler(Terminal &term, P prompt, std::function<bool(std::string)> onTextEntry):
+				inputThread_(&InputHandler::inputThreadFunc_, this),
+				textEntryFunc_(onTextEntry),
+				prompt_(prompt),
+				term_(term)  
+				{
+					inputThread_.detach();
+				}
+
+		private:
+			Terminal & term_;
+			
+			P prompt_;
+			std::function<bool(std::string)> textEntryFunc_;
+			std::thread inputThread_;
+
+			void inputThreadFunc_()
+				{
+					std::string line = "";
+					do
+					{
+						term_ << prompt_;
+						std::getline (std::cin, line);
+					} while(textEntryFunc_(line));
+				}
+			
 	};
 	
 	
