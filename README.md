@@ -20,5 +20,5 @@ Allows the user to create an object to handle input.
     
     InputHandler<Prompt> inputHandler(terminal, Prompt("Enter Some text: ", Location(0,2)), inputFunc); 
 
-Will move the cursor to the location (0,2) and display the text "Enter Some text:".  When the user hits enter, it will call inputFunc type (std::function<bool(std::string)>).  This function gets the string entered and should return true if you want to display the same prompt again.
+Will move the cursor to the location (0,2) and display the text "Enter Some text:".  When the user hits enter, it will call inputFunc type (`std::function<bool(std::string)>`).  This function gets the string entered and should return true if you want to display the same prompt again.
 
